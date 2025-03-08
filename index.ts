@@ -1,48 +1,68 @@
-import { z } from "zod";
-import { createGraphQLError, type GraphQLResponse } from "./errors.ts";
+import { z, type Primitive } from "zod";
+import { createGraphQLError, throws, type GraphQLResponse } from "./errors.ts";
+import "./zodExtensions.ts";
 
 // Type helper to transform an object with Zod schemas into pure TypeScript types
 type InferZodShape<T> = {
-  [K in keyof T]: T[K] extends z.ZodType<any, any>
+  [K in keyof T as K extends "_args" ? never : K]: T[K] extends z.ZodType<
+    any,
+    any
+  >
     ? z.infer<T[K]>
-    : T[K] extends object
-      ? InferZodShape<T[K]>
-      : T[K];
+    : T[K] extends (infer U)[]
+      ? InferZodShape<U>[]
+      : T[K] extends object
+        ? InferZodShape<T[K]>
+        : T[K];
 };
 
-export class Query<T, V extends Record<string, any>> {
+export class Query<T, V = Record<string, Primitive>> {
   private constructor(
     private readonly url: string,
     private readonly query: string,
     private readonly schema?: z.ZodType<T>,
   ) {}
 
-  public static fromString<T, V extends Record<string, any>>(
+  public static fromString<T>(
     url: string,
     queryString: string,
     schema: z.ZodType<T>,
-  ): Query<T, V>;
-  public static fromString<V extends Record<string, any>>(
-    url: string,
-    queryString: string,
-  ): Query<unknown, V>;
-  public static fromString<V extends Record<string, any>>(
+  ): Query<T>;
+  public static fromString(url: string, queryString: string): Query<unknown>;
+  public static fromString(
     url: string,
     queryString: string,
     schema?: z.ZodType,
   ) {
-    return new Query<unknown, V>(url, queryString, schema);
+    return new Query<unknown>(url, queryString, schema);
   }
 
-  public static typed<T extends object, V extends Record<string, any>>(
+  public static typed<V extends Record<string, z.ZodType>, T extends object>(
     url: string,
     name: string,
+    variables: V,
     query: T,
   ) {
-    const queryString = `query ${name} {${buildGraphQLQuery(query)}}`;
+    let argsString = "";
+    if (Object.keys(variables).length > 0) {
+      argsString =
+        "(" +
+        Object.entries(variables)
+          .map(
+            ([v, t]) =>
+              `$${v}:${t.name() ?? throws(`variable ${v} type not named`)}`,
+          )
+          .join(",") +
+        ")";
+    }
+    const queryString = `query ${name}${argsString} {${buildGraphQLQuery(query)}}`;
     console.log("\n\n", queryString, "\n");
     const schema = createZodSchemaFromShape(query);
-    return new Query<InferZodShape<T>, V>(url, queryString, schema);
+    return new Query<InferZodShape<T>, InferZodShape<V>>(
+      url,
+      queryString,
+      schema,
+    );
   }
 
   public toString() {
@@ -111,15 +131,35 @@ export class Query<T, V extends Record<string, any>> {
 
 // Helper function to build GraphQL query string
 function buildGraphQLQuery(shape: object): string {
-  // Implementation to convert the shape to GraphQL query string
-  // This is just a simplified example
   const queryParts: string[] = [];
 
   for (const [key, value] of Object.entries(shape)) {
-    if (value instanceof z.ZodType) {
+    if (key === "_args") {
+      continue; // Skip _args in this pass, we'll use it when processing the parent
+    }
+
+    if (isZodSchema(value)) {
       queryParts.push(key);
+    } else if (Array.isArray(value) && value.length > 0) {
+      // For arrays, use the first item as a template
+      queryParts.push(`${key} { ${buildGraphQLQuery(value[0])} }`);
     } else if (typeof value === "object") {
-      queryParts.push(`${key} { ${buildGraphQLQuery(value)} }`);
+      // Check if we have arguments for this field
+      const args = value["_args"];
+      let argsString = "";
+
+      if (args && typeof args === "object") {
+        const argParts: string[] = [];
+        for (const [argName, argValue] of Object.entries(args)) {
+          argParts.push(`${argName}: ${argValue}`);
+        }
+
+        if (argParts.length > 0) {
+          argsString = `(${argParts.join(", ")})`;
+        }
+      }
+
+      queryParts.push(`${key}${argsString} { ${buildGraphQLQuery(value)} }`);
     }
   }
 
@@ -147,12 +187,19 @@ function createZodSchemaFromShape(shape: object): z.ZodType {
   const schemaShape: Record<string, z.ZodType> = {};
 
   for (const [key, value] of Object.entries(shape)) {
+    if (key === "_args") {
+      continue; // Skip _args when building validation schema
+    }
+
     if (isZodSchema(value)) {
       console.log(`key ${key} detected to be a zod type`);
       schemaShape[key] = value;
+    } else if (Array.isArray(value) && value.length > 0) {
+      console.log(`key ${key} detected to be an array`);
+      const itemSchema = createZodSchemaFromShape(value[0]);
+      schemaShape[key] = z.array(itemSchema);
     } else if (typeof value === "object") {
       console.log(`key ${key} detected to be a nested object`);
-      // Create a nested schema directly instead of trying to pass a ZodType to z.object()
       schemaShape[key] = createZodSchemaFromShape(value);
     } else {
       console.warn(

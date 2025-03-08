@@ -1,3 +1,6 @@
+export function throws(message?: string, options?: ErrorOptions): never {
+  throw new Error(message, options);
+}
 /**
  * Creates an Error from a GraphQL response containing errors
  * @param respObj - The GraphQL response object
