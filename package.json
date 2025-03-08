@@ -1,14 +1,15 @@
 {
   "name": "libgqlts",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "type-safe GraphQL",
   "main": "dist/index.umd.js",
   "module": "dist/index.es.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/YOUR_LIBRARY_NAME.es.js",
-      "require": "./dist/YOUR_LIBRARY_NAME.umd.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/libgqlts.es.js",
+      "require": "./dist/libgqlts.umd.js"
     }
   },
   "scripts": {
