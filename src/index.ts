@@ -58,7 +58,6 @@ export class Query<T, V = Record<string, Primitive>> {
         ")";
     }
     const queryString = `query ${name}${argsString} {${buildGraphQLQuery(query)}}`;
-    console.log("\n\n", queryString, "\n");
     const schema = createZodSchemaFromShape(query);
     return new Query<InferZodShape<T>, InferZodShape<V>>(
       url,
@@ -194,19 +193,13 @@ function createZodSchemaFromShape(shape: object): z.ZodType {
     }
 
     if (isZodSchema(value)) {
-      console.log(`key ${key} detected to be a zod type`);
       schemaShape[key] = value;
     } else if (Array.isArray(value) && value.length > 0) {
-      console.log(`key ${key} detected to be an array`);
       const itemSchema = createZodSchemaFromShape(value[0]);
       schemaShape[key] = z.array(itemSchema);
     } else if (typeof value === "object") {
-      console.log(`key ${key} detected to be a nested object`);
       schemaShape[key] = createZodSchemaFromShape(value);
     } else {
-      console.warn(
-        `unexpected type <${typeof value}> in query shape key [${key}]`,
-      );
       throw new Error(
         `unexpected type <${typeof value}> in query shape key [${key}]`,
       );

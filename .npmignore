@@ -1,0 +1,9 @@
+node_modules
+.DS_Store
+.vscode
+.vs
+.idea
+.src
+vite.config.js
+.git
+.gitignore
