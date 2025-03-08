@@ -3,9 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.ts",
-  "scripts": {
-    "run": "NODE_OPTIONS='--experimental-transform-types --disable-warning=ExperimentalWarning' node index.ts"
-  },
+  "scripts": {},
   "keywords": [
     "graphql"
   ],
