@@ -2,6 +2,8 @@ import { z, type Primitive } from "zod";
 import { createGraphQLError, throws, type GraphQLResponse } from "./errors.ts";
 import "./zodExtensions.ts";
 
+export { z };
+
 // Type helper to transform an object with Zod schemas into pure TypeScript types
 type InferZodShape<T> = {
   [K in keyof T as K extends "_args" ? never : K]: T[K] extends z.ZodType<

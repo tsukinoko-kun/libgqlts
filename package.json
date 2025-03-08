@@ -1,6 +1,6 @@
 {
   "name": "libgqlts",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "type-safe GraphQL",
   "main": "index.ts",
   "type": "module",
