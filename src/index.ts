@@ -1,6 +1,6 @@
-import { z, type Primitive } from "zod";
-import { createGraphQLError, throws, type GraphQLResponse } from "./errors.ts";
-import "./zodExtensions.ts";
+import type { Primitive } from "zod";
+import { z } from "./zodExtensions";
+import { createGraphQLError, throws, type GraphQLResponse } from "./errors";
 
 export { z };
 
